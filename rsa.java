@@ -32,7 +32,7 @@ public class RSAExample {
         int bitlen = 2048;
         RSAExample rsa = new RSAExample(bitlen);
 
-        String plaintext = system.in(); //prendi in input
+        String plaintext = system.in(); //prendi in input i dati ritardato
         logger.info("Testo in chiaro: " + plaintext);
 
         BigInteger message = new BigInteger(plaintext.getBytes());
