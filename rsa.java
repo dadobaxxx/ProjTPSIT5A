@@ -13,9 +13,9 @@ public class RSAExample {
         BigInteger p = new BigInteger(bitlen / 2, 100, random);
         BigInteger q = new BigInteger(bitlen / 2, 100, random);
         n = p.multiply(q);
-        BigInteger phi = p.subtract(BigInteger.ONE).multiply(q.subtract(BigInteger.ONE));
+        BigInteger v = p.subtract(BigInteger.ONE).multiply(q.subtract(BigInteger.ONE));
         e = new BigInteger("65537"); // Valore comunemente utilizzato per e
-        d = e.modInverse(phi);
+        d = e.modInverse(v);
     }
 
     // Criptare un messaggio
@@ -32,7 +32,7 @@ public class RSAExample {
         int bitlen = 2048;
         RSAExample rsa = new RSAExample(bitlen);
 
-        String plaintext = "Ciao, mondo!";
+        String plaintext = system.in(); //prendi in input
         logger.info("Testo in chiaro: " + plaintext);
 
         BigInteger message = new BigInteger(plaintext.getBytes());
