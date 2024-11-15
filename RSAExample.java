@@ -19,8 +19,18 @@ public class RSAExample {
         } while (e.gcd(v).equals(BigInteger.ONE));
 
         d= e.modInverse(v);
-
     }
 
+    private BigInteger criptato(BigInteger testo){
+        return testo.modPow(e, n);
+    }
+
+    private BigInteger decriptato(BigInteger criptato){
+        return criptato.modPow(d, n);
+    }
+
+    public static void main(String[] args) {
+        
+    }
     
 }
