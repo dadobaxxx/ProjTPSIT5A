@@ -1,5 +1,6 @@
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.Scanner;
 import java.util.logging.Logger;
 
 public class RSAExample {
@@ -30,7 +31,18 @@ public class RSAExample {
     }
 
     public static void main(String[] args) {
-        
+        int bitlen = 1024;
+        RSAExample rsa= new RSAExample(bitlen);
+        Scanner inp = new Scanner (System.in);
+
+        String input = inp.nextLine();
+        logger.info("testo utente: " + input);
+
+        BigInteger testo = new BigInteger(input.getBytes());
+        BigInteger criptato = rsa.criptato(testo);
+        BigInteger decriptato = rsa.decriptato(criptato);
+        logger.info ("criptato: " + criptato);
+        logger.info ("decriptato: " + decriptato);
     }
     
 }
