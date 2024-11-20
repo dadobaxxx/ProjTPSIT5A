@@ -30,7 +30,7 @@ public class rsaEnpowered {
         return criptato.modPow(d, n);
     }
 
-    private static String criptareStringa(RSAExample rsa, String input) {
+    private static String criptareStringa(rsaEnpowered rsa, String input) {
         String[] tokens = input.split("\\s+");
         StringBuilder criptatoBuilder = new StringBuilder();
 
@@ -43,7 +43,7 @@ public class rsaEnpowered {
         return criptatoBuilder.toString().trim();
     }
 
-    private static String decriptareStringa(RSAExample rsa, String criptato) {
+    private static String decriptareStringa(rsaEnpowered rsa, String criptato) {
         String[] criptatoTokens = criptato.split("\\s+");
         StringBuilder decriptatoBuilder = new StringBuilder();
 
@@ -58,7 +58,7 @@ public class rsaEnpowered {
 
     public static void main(String[] args) {
         int bitlen = 1024;
-        RSAExample rsa = new RSAExample(bitlen);
+        rsaEnpowered rsa = new rsaEnpowered(bitlen);
         Scanner inp = new Scanner(System.in);
 
         String input = inp.nextLine();
