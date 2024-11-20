@@ -13,11 +13,11 @@ public class RSAExample {
         q= new BigInteger(bitlen, 100, random);
 
         n= p.multiply(q);
-        BigInteger v = (p.subtract(BigInteger.ONE)).multiply(p.subtract(BigInteger.ONE));
+        BigInteger v = (p.subtract(BigInteger.ONE)).multiply(q.subtract(BigInteger.ONE));
 
         do{
             e= BigInteger.probablePrime(bitlen, random);
-        } while (e.gcd(v).equals(BigInteger.ONE));
+        } while (!e.gcd(v).equals(BigInteger.ONE));
 
         d= e.modInverse(v);
     }
