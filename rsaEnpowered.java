@@ -30,30 +30,30 @@ public class rsaEnpowered {
         return criptato.modPow(d, n);
     }
 
-    private static String criptareStringa(rsaEnpowered rsa, String input) {
-        String[] tokens = input.split("\\s+");
-        StringBuilder criptatoBuilder = new StringBuilder();
+    private static String criptS(rsaEnpowered rsa, String input) {
+        String[] inTkn = input.split("\\s+"); // serve a dividere la stringa basandosi su uno o più spazi vuoti
+        StringBuilder output = new StringBuilder();
 
-        for (String token : tokens) {
-            BigInteger bigIntToken = new BigInteger(token.getBytes());
-            BigInteger criptatoToken = rsa.criptato(bigIntToken);
-            criptatoBuilder.append(criptatoToken.toString()).append(" ");
+        for (String token : inTkn) {
+            BigInteger bigIntTkn = new BigInteger(token.getBytes());
+            BigInteger criptTkn = rsa.criptato(bigIntTkn);
+            output.append(criptTkn.toString()).append(" ");
         }
 
-        return criptatoBuilder.toString().trim();
+        return output.toString().trim(); // rimuove tutti gli spazi dal testo ad eccezione dei singoli spazi tra le parole
     }
 
-    private static String decriptareStringa(rsaEnpowered rsa, String criptato) {
-        String[] criptatoTokens = criptato.split("\\s+");
-        StringBuilder decriptatoBuilder = new StringBuilder();
+    private static String decriptS(rsaEnpowered rsa, String criptato) {
+        String[] criptTokens = criptato.split("\\s+"); // serve a dividere la stringa basandosi su uno o più spazi vuoti
+        StringBuilder output = new StringBuilder();
 
-        for (String criptatoToken : criptatoTokens) {
-            BigInteger bigIntCriptatoToken = new BigInteger(criptatoToken);
-            BigInteger decriptatoToken = rsa.decriptato(bigIntCriptatoToken);
-            decriptatoBuilder.append(new String(decriptatoToken.toByteArray())).append(" ");
+        for (String tkn : criptTokens) {
+            BigInteger bigIntTkn = new BigInteger(tkn);
+            BigInteger outTkn = rsa.decriptato(bigIntTkn);
+            output.append(new String(outTkn.toByteArray())).append(" ");
         }
 
-        return decriptatoBuilder.toString().trim();
+        return output.toString().trim(); // rimuove tutti gli spazi dal testo ad eccezione dei singoli spazi tra le parole
     }
 
     public static void main(String[] args) {
@@ -64,10 +64,10 @@ public class rsaEnpowered {
         String input = inp.nextLine();
         logger.info("Testo utente: " + input);
 
-        String criptato = criptareStringa(rsa, input);
+        String criptato = criptS(rsa, input);
         logger.info("Testo criptato: " + criptato);
 
-        String decriptato = decriptareStringa(rsa, criptato);
+        String decriptato = decriptS(rsa, criptato);
         logger.info("Testo decriptato: " + decriptato);
     }
 }
