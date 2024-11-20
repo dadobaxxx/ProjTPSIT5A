@@ -38,7 +38,7 @@ public class RSAExample {
         String input = inp.nextLine();
         logger.info("testo utente: " + input);
 
-        BigInteger testo = new BigInteger(input.getBytes());
+        BigInteger testo = new BigInteger(input);
         BigInteger criptato = rsa.criptato(testo);
         BigInteger decriptato = rsa.decriptato(criptato);
         logger.info ("criptato: " + criptato);
