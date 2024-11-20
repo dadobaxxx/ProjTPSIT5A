@@ -3,11 +3,11 @@ import java.security.SecureRandom;
 import java.util.Scanner;
 import java.util.logging.Logger;
 
-public class RSAExample {
-    private static final Logger logger = Logger.getLogger(RSAExample.class.getName());
+public class rsaEnpowered {
+    private static final Logger logger = Logger.getLogger(rsaEnpowered.class.getName());
     private BigInteger n, d, e, p, q;
 
-    private RSAExample(int bitlen) {
+    private rsaEnpowered(int bitlen) {
         SecureRandom random = new SecureRandom();
         p = new BigInteger(bitlen, 100, random);
         q = new BigInteger(bitlen, 100, random);
