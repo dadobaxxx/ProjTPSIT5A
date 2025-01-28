@@ -55,4 +55,3 @@ public class Client {
         } while (!userInput.equalsIgnoreCase("EXIT"));
     }
 }
-
