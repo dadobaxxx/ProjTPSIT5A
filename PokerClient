@@ -1,57 +1,83 @@
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.stage.Stage;
 import java.io.*;
 import java.net.Socket;
-import java.text.MessageFormat;
+import java.math.BigInteger;
+import java.util.Optional;
 
-public class Client {
-
-    private static final String serverIp = "127.0.0.1";
-    private static final int serverPort = 55555;
-
-    private final Socket socket;
-    private final BufferedReader reader;
-    private final PrintWriter writer;
+public class PokerClient extends Application {
+    private PokerGUI gui;
+    private PrintWriter out;
+    private BufferedReader in;
+    private GameManagement rsa;
+    private String playerName;
 
     public static void main(String[] args) {
-        establishConnection();
+        launch(args);
     }
 
-    private static void establishConnection() {
-        try (Socket s = new Socket(serverIp, serverPort)) {
-            System.out.println("Connected successfully");
-            new Client(s).handleUserInput();
-        } catch (IOException e) {
-            System.out.println("Connection failed with given ip and port");
-            throw new RuntimeException(e);
-        }
+    @Override
+    public void start(Stage primaryStage) {
+        gui = new PokerGUI(this);
+        gui.initializeUI(primaryStage);
+        connectToServer();
     }
 
-    private BufferedReader initializeReader(Socket s) throws IOException {
-        return new BufferedReader(new InputStreamReader(s.getInputStream()));
-    }
-
-    private PrintWriter initializeWriter(Socket s) throws IOException {
-        return new PrintWriter(new OutputStreamWriter(s.getOutputStream()));
-    }
-
-    public Client(Socket s) {
+    private void connectToServer() {
         try {
-            this.reader = initializeReader(s);
-            this.writer = initializeWriter(s);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            Socket socket = new Socket("localhost", 12345);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            BigInteger e = new BigInteger(in.readLine());
+            BigInteger n = new BigInteger(in.readLine());
+            rsa = new GameManagement(e, n);
+
+            Optional<String> name = gui.showNameDialog();
+            if (!name.isPresent()) {
+                Platform.exit();
+                return;
+            }
+            playerName = name.get();
+            sendEncrypted(playerName);
+
+            new Thread(this::handleServerMessages).start();
+
+        } catch (IOException ex) {
+            gui.showError("Errore di connessione", "Impossibile connettersi al server");
+            Platform.exit();
         }
-        this.socket = s;
     }
 
-    private void handleUserInput() throws IOException {
-        System.out.println("Awaiting user input...");
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        String userInput;
-        do {
-            userInput = br.readLine();
-            writer.println(userInput);
-            writer.flush();
-            System.out.println(MessageFormat.format("Server response: {0}. Awaiting next input..", reader.readLine()));
-        } while (!userInput.equalsIgnoreCase("EXIT"));
+    private void handleServerMessages() {
+        try {
+            String serverMessage;
+            while ((serverMessage = in.readLine()) != null) {
+                String decrypted = GameManagement.decriptS(rsa, serverMessage);
+                handleServerMessage(decrypted);
+            }
+        } catch (Exception ex) {
+            Platform.runLater(() -> gui.showError("Errore di connessione", "Connessione al server persa"));
+        }
+    }
+
+    private void handleServerMessage(String message) {
+        if (message.startsWith("CARD:")) {
+            Platform.runLater(() -> gui.updateCards(message));
+        } else if (message.startsWith("POT:")) {
+            Platform.runLater(() -> gui.updatePot(message));
+        } else {
+            Platform.runLater(() -> gui.appendChatMessage(message));
+        }
+    }
+
+    public void sendMessage(String message) {
+        try {
+            String encrypted = GameManagement.criptS(rsa, message);
+            out.println(encrypted);
+        } catch (Exception e) {
+            gui.showError("Errore crittografia", "Impossibile inviare il messaggio");
+        }
     }
 }
