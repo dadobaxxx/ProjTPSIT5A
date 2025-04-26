@@ -1,91 +1,102 @@
+// 1. Server aggiornato con crittografia e timer
+import org.apache.commons.lang3.StringUtils;
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
+import java.util.*;
+import java.math.BigInteger;
+import java.security.SecureRandom;
+import java.util.concurrent.*;
 
-public class Server {
+public class PokerServer {
+    private static final int PORT = 12345;
+    private static final int TURN_TIMEOUT = 30;
+    private static List<ClientHandler> clients = new ArrayList<>();
+    private static GameEngine gameEngine = new GameEngine();
+    private static GameManagement rsa = new GameManagement(2048);
 
-    private static final int DEFAULT_SERVICE_PORT = 55555;
-
-    public static void main(String[] argv) {
-        try {
-            startServer();
-            System.out.println("Server avviato correttamente");
+    public static void main(String[] args) {
+        ExecutorService executor = Executors.newCachedThreadPool();
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            System.out.println("Server avviato...");
+            
+            while (true) {
+                Socket socket = serverSocket.accept();
+                ClientHandler clientThread = new ClientHandler(socket, gameEngine, rsa);
+                clients.add(clientThread);
+                executor.execute(clientThread);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static void startServer() throws IOException {
-        try (ServerSocket server = new ServerSocket(DEFAULT_SERVICE_PORT)) {
-            System.out.println("Porta aperta...");
-            while (true) {
-                Socket s = server.accept();
-                System.out.println("Un client si è connesso...");
-                new Handler(s); // Avvia il thread per gestire il client
+    static void broadcastMessage(String message, ClientHandler exclude) {
+        for (ClientHandler client : clients) {
+            if (client != exclude) {
+                client.sendMessage(message);
             }
-        } catch (IOException e) {
-            System.out.println("Problemi riscontrati nell'apertura della porta, chiusura del server...");
         }
     }
 
-    static class Handler extends Thread {
+    static class ClientHandler extends Thread {
+        private Socket socket;
+        private PrintWriter out;
+        private BufferedReader in;
+        private GameEngine gameEngine;
+        private GameManagement rsa;
+        public String playerName;
+        private ScheduledExecutorService timerExecutor = Executors.newSingleThreadScheduledExecutor();
 
-        private final Socket socket;
-        private final BufferedReader reader;
-        private final PrintWriter writer;
-
-        public Handler(Socket s) {
-            try {
-                this.reader = initializeReader(s);
-                this.writer = initializeWriter(s);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            this.socket = s;
-            this.start();
+        public ClientHandler(Socket socket, GameEngine gameEngine, GameManagement rsa) {
+            this.socket = socket;
+            this.gameEngine = gameEngine;
+            this.rsa = rsa;
         }
 
-        private BufferedReader initializeReader(Socket s) throws IOException {
-            return new BufferedReader(new InputStreamReader(s.getInputStream()));
-        }
-
-        private PrintWriter initializeWriter(Socket s) throws IOException {
-            return new PrintWriter(new OutputStreamWriter(s.getOutputStream()));
-        }
-
-        @Override
         public void run() {
-            boolean keepChatting = true;
-            while (keepChatting) {
-                try {
-                    handleMessage();
-                } catch (IOException e) {
-                    keepChatting = false;
-                    System.out.println(e); // Log it, not print it
-                }
-            }
-
             try {
-                this.socket.close();
+                out = new PrintWriter(socket.getOutputStream(), true);
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+                // Invia chiave pubblica al client
+                out.println(rsa.getE().toString());
+                out.println(rsa.getN().toString());
+
+                String encryptedName = in.readLine();
+                playerName = GameManagement.decriptS(rsa, encryptedName);
+                gameEngine.addPlayer(playerName);
+                
+                broadcastMessage(playerName + " si è unito al tavolo!", this);
+
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    String decrypted = GameManagement.decriptS(rsa, inputLine);
+                    if (decrypted.startsWith("/chat ")) {
+                        String message = StringUtils.substringAfter(decrypted, "/chat ");
+                        broadcastMessage("[CHAT] " + playerName + ": " + message, null);
+                    } else {
+                        gameEngine.processCommand(decrypted, this);
+                    }
+                }
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                e.printStackTrace();
             }
         }
 
-        private void handleMessage() throws IOException {
-            String inputMessage;
+        public void startTurnTimer() {
+            timerExecutor.schedule(() -> {
+                gameEngine.processCommand("fold", this);
+                broadcastMessage(playerName + " timeout! Fold automatico", null);
+            }, TURN_TIMEOUT, TimeUnit.SECONDS);
+        }
 
-            System.out.println("Awaiting client message");
-            inputMessage = this.reader.readLine();
-            System.out.println(inputMessage);
-            if (inputMessage.equalsIgnoreCase("PING")) {
-                writer.println("PONG");
-            } else if (inputMessage.equalsIgnoreCase("PONG")) {
-                writer.println("PING");
-            } else {
-                writer.println("COMMAND NOT RECOGNIZED. TRY 'PING' OR 'PONG'");
-            }
-            writer.flush();
+        public void stopTurnTimer() {
+            timerExecutor.shutdownNow();
+        }
+
+        public void sendMessage(String message) {
+            String encrypted = GameManagement.criptS(rsa, message);
+            out.println(encrypted);
         }
     }
 }
