@@ -46,34 +46,3 @@ public class GameManagement {
     public BigInteger getE() { return e; }
     public BigInteger getN() { return n; }
 }
-
-class Deck {
-    private List<Card> cards = new ArrayList<>();
-    private int index = 0;
-
-    public Deck() {
-        for (Suit suit : Suit.values()) {
-            for (Rank rank : Rank.values()) {
-                cards.add(new Card(rank, suit));
-            }
-        }
-        Collections.shuffle(cards);
-    }
-
-    public Card draw() {
-        return cards.get(index++);
-    }
-}
-
-enum Suit { HEARTS, DIAMONDS, CLUBS, SPADES }
-enum Rank { TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE }
-
-class Card {
-    Rank rank;
-    Suit suit;
-    
-    public Card(Rank rank, Suit suit) {
-        this.rank = rank;
-        this.suit = suit;
-    }
-}
