@@ -12,7 +12,7 @@ public class PokerServer {
     private static final int TURN_TIMEOUT = 30;
     private static List<ClientHandler> clients = new ArrayList<>();
     private static GameEngine gameEngine = new GameEngine();
-    private static GameManagement rsa = new GameManagement(2048);
+    private static RSACryptography rsa = new RSACryptography(2048);
 
     public static void main(String[] args) {
         ExecutorService executor = Executors.newCachedThreadPool();
@@ -43,11 +43,11 @@ public class PokerServer {
         private PrintWriter out;
         private BufferedReader in;
         private GameEngine gameEngine;
-        private GameManagement rsa;
+        private RSACryptography rsa;
         public String playerName;
         private ScheduledExecutorService timerExecutor = Executors.newSingleThreadScheduledExecutor();
 
-        public ClientHandler(Socket socket, GameEngine gameEngine, GameManagement rsa) {
+        public ClientHandler(Socket socket, GameEngine gameEngine, RSACryptography rsa) {
             this.socket = socket;
             this.gameEngine = gameEngine;
             this.rsa = rsa;
@@ -63,14 +63,14 @@ public class PokerServer {
                 out.println(rsa.getN().toString());
 
                 String encryptedName = in.readLine();
-                playerName = GameManagement.decriptS(rsa, encryptedName);
-                gameEngine.addPlayer(playerName);
+                playerName = RSACryptography.decriptS(rsa, encryptedName);
+                gameEngine.addPlayer(playerName, this);
                 
                 broadcastMessage(playerName + " si è unito al tavolo!", this);
 
                 String inputLine;
                 while ((inputLine = in.readLine()) != null) {
-                    String decrypted = GameManagement.decriptS(rsa, inputLine);
+                    String decrypted = RSACryptography.decriptS(rsa, inputLine);
                     if (decrypted.startsWith("/chat ")) {
                         String message = StringUtils.substringAfter(decrypted, "/chat ");
                         broadcastMessage("[CHAT] " + playerName + ": " + message, null);
@@ -95,7 +95,7 @@ public class PokerServer {
         }
 
         public void sendMessage(String message) {
-            String encrypted = GameManagement.criptS(rsa, message);
+            String encrypted = RSACryptography.criptS(rsa, message);
             out.println(encrypted);
         }
     }
