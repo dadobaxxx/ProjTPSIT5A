@@ -75,7 +75,11 @@ public class PokerServer {
                         String message = StringUtils.substringAfter(decrypted, "/chat ");
                         broadcastMessage("[CHAT] " + playerName + ": " + message, null);
                     } else {
-                        gameEngine.processCommand(decrypted, this);
+                        try {
+                            gameEngine.processCommand(decrypted, this);
+                        } catch (PokerException e) {
+                            sendMessage("ERRORE: " + e.getMessage());
+                        }
                     }
                 }
             } catch (IOException e) {
