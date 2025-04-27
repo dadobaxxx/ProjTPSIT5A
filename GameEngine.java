@@ -10,6 +10,7 @@ public class GameEngine {
     private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> currentTimer;
     private Map<String, PokerServer.ClientHandler> clientMap = new HashMap<>();
+    private int maxBet = 100; 
 
     public enum HandRank {
         HIGH_CARD, ONE_PAIR, TWO_PAIR, THREE_OF_A_KIND, STRAIGHT,
@@ -94,10 +95,6 @@ public class GameEngine {
             startTimer();
         } catch (NumberFormatException e) {
             client.sendMessage("ERRORE: Importo non valido");
-        } catch (InvalidBetException e) {
-            client.sendMessage("ERRORE: " + e.getMessage());
-        }
-
     }
 
     private void startTimer() {
@@ -133,19 +130,32 @@ public class GameEngine {
     }
 }
 
-public class PokerException extends Exception {
+private void validateBet(int amount, String playerName) throws InvalidBetException {
+    if (amount <= 0) {
+        throw new InvalidBetException("L'importo deve essere maggiore di zero");
+    }
+    if (amount > maxBet) {
+        throw new InvalidBetException("Superato il massimo consentito (" + maxBet + ")");
+    }
+}
+
+} catch (InvalidBetException e) {
+    client.sendMessage("ERRORE: " + e.getMessage());
+}
+
+public static class PokerException extends Exception {
     public PokerException(String message) {
         super(message);
     }
 }
 
-public class InvalidBetException extends PokerException {
+public static class InvalidBetException extends PokerException {
     public InvalidBetException() {
         super("Scommessa non valida");
     }
 }
 
-public class DeckEmptyException extends PokerException {
+public static class DeckEmptyException extends PokerException {
     public DeckEmptyException() {
         super("Mazzo esaurito");
     }
