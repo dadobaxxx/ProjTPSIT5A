@@ -10,7 +10,7 @@ public class PokerClient extends Application {
     private PokerGUI gui;
     private PrintWriter out;
     private BufferedReader in;
-    private GameManagement rsa;
+    private GameManagRSACryptographyement rsa;
     private String playerName;
 
     public static void main(String[] args) {
@@ -32,7 +32,7 @@ public class PokerClient extends Application {
 
             BigInteger e = new BigInteger(in.readLine());
             BigInteger n = new BigInteger(in.readLine());
-            rsa = new GameManagement(e, n);
+            rsa = new RSACryptography(e, n);
 
             Optional<String> name = gui.showNameDialog();
             if (!name.isPresent()) {
@@ -54,7 +54,7 @@ public class PokerClient extends Application {
         try {
             String serverMessage;
             while ((serverMessage = in.readLine()) != null) {
-                String decrypted = GameManagement.decriptS(rsa, serverMessage);
+                String decrypted = RSACryptography.decriptS(rsa, serverMessage);
                 handleServerMessage(decrypted);
             }
         } catch (Exception ex) {
