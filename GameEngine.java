@@ -10,7 +10,25 @@ public class GameEngine {
     private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> currentTimer;
     private Map<String, PokerServer.ClientHandler> clientMap = new HashMap<>();
-    private int maxBet = 100; 
+    private int maxBet = 100;
+
+    public static class PokerException extends Exception {
+        public PokerException(String message) {
+            super(message);
+        }
+    }
+
+    public static class InvalidBetException extends PokerException {
+        public InvalidBetException(String message) {
+            super(message);
+        }
+    }
+
+    public static class DeckEmptyException extends PokerException {
+        public DeckEmptyException() {
+            super("Mazzo esaurito");
+        }
+    }
 
     public enum HandRank {
         HIGH_CARD, ONE_PAIR, TWO_PAIR, THREE_OF_A_KIND, STRAIGHT,
@@ -64,13 +82,17 @@ public class GameEngine {
     }
 
     public void addPlayer(String playerName, PokerServer.ClientHandler client) {
-        players.add(playerName);
-        playerCards.put(playerName, new ArrayList<>());
-        clientMap.put(playerName, client);
-        dealCards(playerName);
+        try {
+            players.add(playerName);
+            playerCards.put(playerName, new ArrayList<>());
+            clientMap.put(playerName, client);
+            dealCards(playerName);
+        } catch (DeckEmptyException e) {
+            client.sendMessage("ERRORE: Impossibile distribuire carte - " + e.getMessage());
+        }
     }
 
-    private void dealCards(String player) {
+    private void dealCards(String player) throws DeckEmptyException {
         playerCards.get(player).add(deck.draw());
         playerCards.get(player).add(deck.draw());
     }
@@ -83,18 +105,21 @@ public class GameEngine {
                 int amount = Integer.parseInt(command.substring(4));
                 validateBet(amount, client.playerName);
             } else if (command.equals("fold")) {
-            int playerIndex = players.indexOf(client.playerName);
-            players.remove(client.playerName);
-            clientMap.remove(client.playerName);
-            playerCards.remove(client.playerName);
-            if (currentPlayer >= playerIndex && currentPlayer > 0) {
-                currentPlayer--;
+                int playerIndex = players.indexOf(client.playerName);
+                players.remove(client.playerName);
+                clientMap.remove(client.playerName);
+                playerCards.remove(client.playerName);
+                if (currentPlayer >= playerIndex && currentPlayer > 0) {
+                    currentPlayer--;
+                }
             }
-}
             nextPlayer();
             startTimer();
         } catch (NumberFormatException e) {
             client.sendMessage("ERRORE: Importo non valido");
+        } catch (InvalidBetException e) {
+            client.sendMessage("ERRORE: " + e.getMessage());
+        }
     }
 
     private void startTimer() {
@@ -112,7 +137,8 @@ public class GameEngine {
     }
 
     private void nextPlayer() {
-        if (players.isEmpty()) return;
+        if (players.isEmpty())
+            return;
         currentPlayer = (currentPlayer + 1) % players.size();
     }
 
@@ -128,35 +154,13 @@ public class GameEngine {
         allCards.addAll(communityCards);
         return HandEvaluator.evaluateHand(allCards);
     }
-}
 
-private void validateBet(int amount, String playerName) throws InvalidBetException {
-    if (amount <= 0) {
-        throw new InvalidBetException("L'importo deve essere maggiore di zero");
-    }
-    if (amount > maxBet) {
-        throw new InvalidBetException("Superato il massimo consentito (" + maxBet + ")");
-    }
-}
-
-} catch (InvalidBetException e) {
-    client.sendMessage("ERRORE: " + e.getMessage());
-}
-
-public static class PokerException extends Exception {
-    public PokerException(String message) {
-        super(message);
-    }
-}
-
-public static class InvalidBetException extends PokerException {
-    public InvalidBetException() {
-        super("Scommessa non valida");
-    }
-}
-
-public static class DeckEmptyException extends PokerException {
-    public DeckEmptyException() {
-        super("Mazzo esaurito");
+    private void validateBet(int amount, String playerName) throws InvalidBetException {
+        if (amount <= 0) {
+            throw new InvalidBetException("L'importo deve essere maggiore di zero");
+        }
+        if (amount > maxBet) {
+            throw new InvalidBetException("Superato il massimo consentito (" + maxBet + ")");
+        }
     }
 }
