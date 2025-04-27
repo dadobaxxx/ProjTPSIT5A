@@ -74,7 +74,7 @@ public class PokerClient extends Application {
 
     public void sendMessage(String message) {
         try {
-            String encrypted = GameManagement.criptS(rsa, message);
+            String encrypted = RSACryptography.criptS(rsa, message);
             out.println(encrypted);
         } catch (Exception e) {
             gui.showError("Errore crittografia", "Impossibile inviare il messaggio");
