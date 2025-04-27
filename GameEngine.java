@@ -82,10 +82,14 @@ public class GameEngine {
                 int amount = Integer.parseInt(command.substring(4));
                 validateBet(amount, client.playerName);
             } else if (command.equals("fold")) {
-                players.remove(client.playerName);
-                clientMap.remove(client.playerName); 
-                playerCards.remove(client.playerName);
+            int playerIndex = players.indexOf(client.playerName);
+            players.remove(client.playerName);
+            clientMap.remove(client.playerName);
+            playerCards.remove(client.playerName);
+            if (currentPlayer >= playerIndex && currentPlayer > 0) {
+                currentPlayer--;
             }
+}
             nextPlayer();
             startTimer();
         } catch (NumberFormatException e) {
