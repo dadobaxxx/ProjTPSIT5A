@@ -1,3 +1,4 @@
+
 // 1. Server aggiornato con crittografia e timer
 import org.apache.commons.lang3.StringUtils;
 import java.io.*;
@@ -18,7 +19,7 @@ public class PokerServer {
         ExecutorService executor = Executors.newCachedThreadPool();
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Server avviato...");
-            
+
             while (true) {
                 Socket socket = serverSocket.accept();
                 ClientHandler clientThread = new ClientHandler(socket, gameEngine, rsa);
@@ -65,7 +66,7 @@ public class PokerServer {
                 String encryptedName = in.readLine();
                 playerName = RSACryptography.decriptS(rsa, encryptedName);
                 gameEngine.addPlayer(playerName, this);
-                
+
                 broadcastMessage(playerName + " si è unito al tavolo!", this);
 
                 String inputLine;
@@ -77,17 +78,16 @@ public class PokerServer {
                     } else {
                         try {
                             gameEngine.processCommand(decrypted, this);
-                        } catch (PokerException e) {
+                        } catch (GameEngine.PokerException e) {
                             sendMessage("ERRORE: " + e.getMessage());
                         }
                     }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
-            }
-            finally {
-            clients.remove(this);
-            broadcastMessage(playerName + " ha lasciato il tavolo.", this);
+            } finally {
+                clients.remove(this);
+                broadcastMessage(playerName + " ha lasciato il tavolo.", this);
             }
         }
 
