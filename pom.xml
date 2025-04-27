@@ -10,34 +10,30 @@
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <javafx.version>18</javafx.version>
+        <javafx.version>17.0.2</javafx.version> <!-- Versione specifica -->
     </properties>
 
     <dependencies>
-        <!-- JavaFX Modules (per il client) -->
+        <!-- JavaFX Modules (senza classifier per cross-platform) -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
-            <version>${javafx.version}</version>
-            <classifier>win</classifier>
+            <version>17.0.2</version>
         </dependency>
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
-            <version>${javafx.version}</version>
-            <classifier>win</classifier>
+            <version>17.0.2</version>
         </dependency>
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-base</artifactId>
-            <version>${javafx.version}</version>
-            <classifier>win</classifier>
+            <version>17.0.2</version>
         </dependency>
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-graphics</artifactId>
-            <version>${javafx.version}</version>
-            <classifier>win</classifier>
+            <version>17.0.2</version>
         </dependency>
 
         <!-- Apache Commons Lang3 -->
@@ -50,21 +46,26 @@
 
     <build>
         <plugins>
-            <!-- Compilatore Java -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
             </plugin>
-
-            <!-- Plugin per eseguire il client JavaFX -->
+            
+            <!-- Plugin JavaFX aggiornato -->
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
-                <version>0.0.9</version>
+                <version>0.0.8</version>
                 <configuration>
-                    <mainClass>PokerClient</mainClass>
+                <mainClass>PokerClient</mainClass>
+                    <!-- Aggiungi i moduli necessari -->
+                    <options>
+                        <option>--add-modules</option>
+                        <option>javafx.controls,javafx.fxml</option>
+                    </options>
                 </configuration>
             </plugin>
-
-            <!-- Plugin per eseguire il server (opzionale)
+        </plugins>
+    </build>
+</project>
