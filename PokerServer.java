@@ -85,6 +85,10 @@ public class PokerServer {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            finally {
+            clients.remove(this);
+            broadcastMessage(playerName + " ha lasciato il tavolo.", this);
+            }
         }
 
         public void startTurnTimer() {
