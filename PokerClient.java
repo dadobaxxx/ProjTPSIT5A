@@ -10,7 +10,7 @@ public class PokerClient extends Application {
     private PokerGUI gui;
     private PrintWriter out;
     private BufferedReader in;
-    private GameManagRSACryptographyement rsa;
+    private RSACryptography rsa;
     private String playerName;
 
     public static void main(String[] args) {
