@@ -54,7 +54,10 @@ public class GameEngine {
             Collections.shuffle(cards);
         }
 
-        public Card draw() {
+        public Card draw() throws DeckEmptyException {
+            if (index >= cards.size()) {
+                throw new DeckEmptyException();
+            }
             return cards.get(index++);
         }
     }
@@ -80,7 +83,8 @@ public class GameEngine {
                 validateBet(amount, client.playerName);
             } else if (command.equals("fold")) {
                 players.remove(client.playerName);
-
+                clientMap.remove(client.playerName); 
+                playerCards.remove(client.playerName);
             }
             nextPlayer();
             startTimer();
@@ -107,6 +111,7 @@ public class GameEngine {
     }
 
     private void nextPlayer() {
+        if (players.isEmpty()) return;
         currentPlayer = (currentPlayer + 1) % players.size();
     }
 
