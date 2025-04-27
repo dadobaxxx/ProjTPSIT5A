@@ -40,7 +40,7 @@ public class PokerClient extends Application {
                 return;
             }
             playerName = name.get();
-            sendEncrypted(playerName);
+            sendMessage(playerName);
 
             new Thread(this::handleServerMessages).start();
 
