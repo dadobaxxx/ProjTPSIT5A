@@ -3,14 +3,14 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.*;
 
-public class GameManagement {
+public class RSACryptography {
     private BigInteger n, d, e, p, q;
 
-    public GameManagement(int bitlen) {
+    public RSACryptography(int bitlen) {
         generateKeys(bitlen);
     }
 
-    public GameManagement(BigInteger e, BigInteger n) {
+    public RSACryptography(BigInteger e, BigInteger n) {
         this.e = e;
         this.n = n;
     }
@@ -29,14 +29,14 @@ public class GameManagement {
         d = e.modInverse(phi);
     }
 
-    public static String criptS(GameManagement rsa, String input) {
+    public static String criptS(RSACryptography rsa, String input) {
         return Arrays.stream(input.split(" "))
             .map(token -> new BigInteger(token.getBytes()))
             .map(bi -> bi.modPow(rsa.e, rsa.n).toString())
             .reduce((a, b) -> a + " " + b).orElse("");
     }
 
-    public static String decriptS(GameManagement rsa, String criptato) {
+    public static String decriptS(RSACryptography rsa, String criptato) {
         return Arrays.stream(criptato.split(" "))
             .map(tkn -> new BigInteger(tkn))
             .map(bi -> new String(bi.modPow(rsa.d, rsa.n).toByteArray()))
