@@ -66,7 +66,7 @@ class Deck {
 }
 
 enum Suit { HEARTS, DIAMONDS, CLUBS, SPADES }
-enum Rank { TWO, THREE, FOUR, FIVE, FIFTH, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE }
+enum Rank { TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE }
 
 class Card {
     Rank rank;
