@@ -1,3 +1,4 @@
+package com.ProjTPSIT5A;
 // 3. Classi per la gestione del gioco
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -5,6 +6,12 @@ import java.util.*;
 
 public class RSACryptography {
     private BigInteger n, d, e, p, q;
+
+    public static class CryptoException extends Exception {
+        public CryptoException(String operation) {
+            super("[CRYPTO] Errore durante " + operation);
+        }
+    }
 
     public RSACryptography(int bitlen) {
         generateKeys(bitlen);
@@ -21,28 +28,37 @@ public class RSACryptography {
         q = new BigInteger(bitlen, 100, random);
         n = p.multiply(q);
         BigInteger phi = (p.subtract(BigInteger.ONE)).multiply(q.subtract(BigInteger.ONE));
-        
+
         do {
             e = new BigInteger(bitlen, random);
         } while (e.compareTo(phi) >= 0 || !e.gcd(phi).equals(BigInteger.ONE));
-        
+
         d = e.modInverse(phi);
     }
 
-    public static String criptS(RSACryptography rsa, String input) {
-        return Arrays.stream(input.split(" "))
-            .map(token -> new BigInteger(token.getBytes()))
-            .map(bi -> bi.modPow(rsa.e, rsa.n).toString())
-            .reduce((a, b) -> a + " " + b).orElse("");
+    public static String criptS(RSACryptography rsa, String input) throws CryptoException {
+        try {
+            return Arrays.stream(input.split(" "))
+                    .map(token -> new BigInteger(token.getBytes()))
+                    .map(bi -> bi.modPow(rsa.e, rsa.n).toString())
+                    .reduce((a, b) -> a + " " + b).orElse("");
+        } catch (Exception e) {
+            throw new CryptoException("crittografia messaggio");
+        }
     }
 
     public static String decriptS(RSACryptography rsa, String criptato) {
         return Arrays.stream(criptato.split(" "))
-            .map(tkn -> new BigInteger(tkn))
-            .map(bi -> new String(bi.modPow(rsa.d, rsa.n).toByteArray()))
-            .reduce((a, b) -> a + " " + b).orElse("");
+                .map(tkn -> new BigInteger(tkn))
+                .map(bi -> new String(bi.modPow(rsa.d, rsa.n).toByteArray()))
+                .reduce((a, b) -> a + " " + b).orElse("");
     }
 
-    public BigInteger getE() { return e; }
-    public BigInteger getN() { return n; }
+    public BigInteger getE() {
+        return e;
+    }
+
+    public BigInteger getN() {
+        return n;
+    }
 }

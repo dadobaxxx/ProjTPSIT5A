@@ -1,3 +1,5 @@
+package com.ProjTPSIT5A;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -9,6 +11,9 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.scene.paint.Paint;
+
+import java.util.Optional;
+
 import javafx.application.Platform;
 
 public class PokerGUI {
@@ -21,7 +26,6 @@ public class PokerGUI {
     private Label statusLabel = new Label("In attesa di giocatori...");
     private Stage primaryStage;
     private int maxRaise = 1000; // Esempio: valore ricevuto dal server
-
 
     // Colori e stili
     private static final Paint CARD_COLOR = Color.WHITE;
@@ -43,7 +47,7 @@ public class PokerGUI {
         mainPane.setBottom(createChatSection());
         mainPane.setRight(createPlayerControls());
 
-        Scene scene = new Scene(mainPane); 
+        Scene scene = new Scene(mainPane);
         primaryStage.setMinWidth(800);
         primaryStage.setMinHeight(600);
         primaryStage.setTitle("Texas Hold'em Poker - Testuale");
@@ -54,7 +58,6 @@ public class PokerGUI {
     private StackPane createPokerTable() {
         StackPane table = new StackPane();
         table.setStyle("-fx-background-color: #2e8b57; -fx-padding: 20;");
-        
 
         // Tavolo verde
         Rectangle tableSurface = new Rectangle(600, 400);
@@ -76,39 +79,38 @@ public class PokerGUI {
     }
 
     private VBox createChatSection() {
-    VBox chatBox = new VBox(5);
-    chatBox.setPadding(new Insets(10));
-    chatBox.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #cccccc; -fx-border-radius: 5;");
+        VBox chatBox = new VBox(5);
+        chatBox.setPadding(new Insets(10));
+        chatBox.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #cccccc; -fx-border-radius: 5;");
 
-    chatArea.setEditable(false);
-    chatArea.setWrapText(true);
-    chatArea.setStyle("-fx-font-family: 'Arial'; -fx-font-size: 14px;");
-    ScrollPane scrollPane = new ScrollPane(chatArea);
-    scrollPane.setFitToWidth(true);
-    scrollPane.setPrefHeight(150);
-    inputField.setPromptText("Scrivi un messaggio...");
-    inputField.setStyle("-fx-font-size: 14px;");
-    chatArea.prefHeightProperty().bind(chatBox.heightProperty().multiply(0.7)); 
-    inputField.prefWidthProperty().bind(chatBox.widthProperty().subtract(60)); 
-    
-    Button sendButton = new Button("Invia");
-    sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
-    sendButton.setOnAction(e -> sendChatMessage());
-    inputField.setOnAction(e -> sendChatMessage());
-    HBox inputContainer = new HBox(5, inputField, sendButton);
-    inputContainer.setAlignment(Pos.CENTER_LEFT);
-    HBox.setHgrow(inputField, Priority.ALWAYS); // Espande il campo input
-    chatBox.getChildren().addAll(
-        new Label("Chat:"), 
-        scrollPane, 
-        inputContainer
-    );
+        chatArea.setEditable(false);
+        chatArea.setWrapText(true);
+        chatArea.setStyle("-fx-font-family: 'Arial'; -fx-font-size: 14px;");
+        ScrollPane scrollPane = new ScrollPane(chatArea);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPrefHeight(150);
+        inputField.setPromptText("Scrivi un messaggio...");
+        inputField.setStyle("-fx-font-size: 14px;");
+        chatArea.prefHeightProperty().bind(chatBox.heightProperty().multiply(0.7));
+        inputField.prefWidthProperty().bind(chatBox.widthProperty().subtract(60));
 
-    VBox.setVgrow(scrollPane, Priority.ALWAYS);
-    chatBox.prefHeightProperty().bind(primaryStage.heightProperty().multiply(0.3));
+        Button sendButton = new Button("Invia");
+        sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+        sendButton.setOnAction(e -> sendChatMessage());
+        inputField.setOnAction(e -> sendChatMessage());
+        HBox inputContainer = new HBox(5, inputField, sendButton);
+        inputContainer.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(inputField, Priority.ALWAYS); // Espande il campo input
+        chatBox.getChildren().addAll(
+                new Label("Chat:"),
+                scrollPane,
+                inputContainer);
 
-    return chatBox;
-}
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+        chatBox.prefHeightProperty().bind(primaryStage.heightProperty().multiply(0.3));
+
+        return chatBox;
+    }
 
     private void sendChatMessage() {
         String message = inputField.getText().trim();
@@ -117,17 +119,18 @@ public class PokerGUI {
             inputField.clear();
         }
     }
+
     private VBox createPlayerControls() {
         VBox controls = new VBox(10);
         controls.setPadding(new Insets(10));
         controls.setStyle("-fx-border-color: gray; -fx-border-width: 1;");
-    
+
         Button foldButton = new Button("Fold");
         Button checkButton = new Button("Check");
         Button callButton = new Button("Call");
         Button raiseButton = new Button("Raise");
         TextField raiseAmount = new TextField();
-    
+
         foldButton.setOnAction(e -> client.sendMessage("fold"));
         checkButton.setOnAction(e -> client.sendMessage("check"));
         callButton.setOnAction(e -> client.sendMessage("call"));
@@ -144,10 +147,11 @@ public class PokerGUI {
                 statusLabel);
         return controls;
     }
+
     public void updateCards(String cardData) {
         communityCards.getChildren().clear();
         playerCards.getChildren().clear();
-    
+
         String[] parts = cardData.split(";");
         for (String part : parts) {
             if (part.startsWith("COMMUNITY:")) {
@@ -157,27 +161,34 @@ public class PokerGUI {
             }
         }
     }
+
     private void addCardBoxes(String[] cards, HBox container) {
         for (String card : cards) {
             String[] cardParts = card.split("_");
             if (cardParts.length == 2) {
-                GameEngine.Rank rank = GameEngine.Rank.valueOf(cardParts[0]);
-                GameEngine.Suit suit = GameEngine.Suit.valueOf(cardParts[1]);
-                container.getChildren().add(createCardBox(rank, suit));
+                try {
+                    GameEngine.Rank rank = GameEngine.Rank.valueOf(cardParts[0]);
+                    GameEngine.Suit suit = GameEngine.Suit.valueOf(cardParts[1]);
+                    container.getChildren().add(createCardBox(rank, suit));
+                } catch (IllegalArgumentException e) {
+                    showError("Carta non valida", "Formato carta errato: " + card);
+                }
+
             }
         }
     }
+
     private StackPane createCardBox(GameEngine.Rank rank, GameEngine.Suit suit) {
         Rectangle cardRect = new Rectangle(60, 90);
         cardRect.setFill(CARD_COLOR);
         cardRect.setStroke(CARD_BORDER);
         cardRect.setArcWidth(10);
         cardRect.setArcHeight(10);
-        cardRect.setStrokeWidth(1); 
+        cardRect.setStrokeWidth(1);
         Text cardText = new Text(getCardSymbol(rank, suit));
         cardText.setFont(Font.font(14));
         cardText.setFill(getSuitColor(suit));
-    
+
         StackPane cardBox = new StackPane(cardRect, cardText);
         cardBox.setStyle("-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 5, 0, 1, 1);");
         cardBox.setOnMouseEntered(e -> {
@@ -188,18 +199,20 @@ public class PokerGUI {
             cardRect.setStroke(CARD_BORDER);
             cardRect.setStrokeWidth(1);
         });
-        
+
         return cardBox;
     }
+
     public void highlightCurrentPlayer(boolean isCurrent) {
         String style = isCurrent ? "-fx-border-color: #00FF00; -fx-border-width: 3;" : "";
         playerCards.setStyle(style);
     }
+
     private String getCardSymbol(GameEngine.Rank rank, GameEngine.Suit suit) {
         String rankSymbol = rank.toString().substring(0, 1);
         if (rank == GameEngine.Rank.TEN)
             rankSymbol = "10";
-    
+
         String suitSymbol = "";
         switch (suit) {
             case HEARTS:
@@ -215,9 +228,10 @@ public class PokerGUI {
                 suitSymbol = "♠";
                 break;
         }
-    
+
         return rankSymbol + suitSymbol;
     }
+
     private Paint getSuitColor(GameEngine.Suit suit) {
         switch (suit) {
             case HEARTS:
@@ -232,6 +246,7 @@ public class PokerGUI {
                 return Color.BLACK;
         }
     }
+
     private void handleRaise(String amount) {
         try {
             int amt = Integer.parseInt(amount);
@@ -246,6 +261,7 @@ public class PokerGUI {
             showError("Formato errato", "Inserisci un numero valido");
         }
     }
+
     public void showError(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(title);
@@ -253,16 +269,29 @@ public class PokerGUI {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
     public void appendChatMessage(String message) {
         Platform.runLater(() -> {
             chatArea.appendText(message + "\n");
             chatArea.setScrollTop(Double.MAX_VALUE); // Scroll alla fine
         });
     }
+
     public void updatePot(String potMessage) {
         potLabel.setText(potMessage);
     }
+
     public void updateStatus(String status) {
         statusLabel.setText(status);
     }
+
+    public Optional<String> showNameDialog() {
+        TextInputDialog dialog = new TextInputDialog("Player");
+        dialog.setTitle("Player Name");
+        dialog.setHeaderText("Benvenuto al tavolo di poker!");
+        dialog.setContentText("Inserisci il tuo nome:");
+
+        Optional<String> result = dialog.showAndWait();
+        return result;
     }
+}

@@ -1,3 +1,5 @@
+package com.ProjTPSIT5A;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
@@ -48,6 +50,7 @@ public class PokerClient extends Application {
             gui.showError("Errore di connessione", "Impossibile connettersi al server");
             Platform.exit();
         }
+
     }
 
     private void handleServerMessages() {

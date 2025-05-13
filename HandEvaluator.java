@@ -1,9 +1,21 @@
+package com.ProjTPSIT5A;
+
 import java.util.*;
 
 public class HandEvaluator {
     private static final int HAND_SIZE = 5;
 
+    public static class InvalidHandException extends IllegalArgumentException {
+        public InvalidHandException(int expected, int actual) {
+            super("[HAND] Combinazione non valida. Attese: " + expected + " carte, ricevute: " + actual);
+        }
+    }
+
     public static GameEngine.HandRank evaluateHand(List<GameEngine.Card> cards) {
+        if (cards == null || cards.size() < 5) {
+            throw new InvalidHandException(5, cards != null ? cards.size() : 0);
+        }
+
         List<List<GameEngine.Card>> combinations = generateCombinations(cards, HAND_SIZE);
         GameEngine.HandRank bestRank = GameEngine.HandRank.HIGH_CARD;
 
@@ -22,7 +34,7 @@ public class HandEvaluator {
         return result;
     }
 
-    private static void generateCombinations(List<GameEngine.Card> cards, int size, int start, 
+    private static void generateCombinations(List<GameEngine.Card> cards, int size, int start,
             List<GameEngine.Card> current, List<List<GameEngine.Card>> result) {
         if (current.size() == size) {
             result.add(new ArrayList<>(current));
@@ -38,23 +50,32 @@ public class HandEvaluator {
 
     private static GameEngine.HandRank evaluateCombination(List<GameEngine.Card> combo) {
         combo.sort((c1, c2) -> c2.rank.value - c1.rank.value);
-        
-        if (isRoyalFlush(combo)) return GameEngine.HandRank.ROYAL_FLUSH;
-        if (isStraightFlush(combo)) return GameEngine.HandRank.STRAIGHT_FLUSH;
-        if (isFourOfAKind(combo)) return GameEngine.HandRank.FOUR_OF_A_KIND;
-        if (isFullHouse(combo)) return GameEngine.HandRank.FULL_HOUSE;
-        if (isFlush(combo)) return GameEngine.HandRank.FLUSH;
-        if (isStraight(combo)) return GameEngine.HandRank.STRAIGHT;
-        if (isThreeOfAKind(combo)) return GameEngine.HandRank.THREE_OF_A_KIND;
-        if (isTwoPair(combo)) return GameEngine.HandRank.TWO_PAIR;
-        if (isOnePair(combo)) return GameEngine.HandRank.ONE_PAIR;
-        
+
+        if (isRoyalFlush(combo))
+            return GameEngine.HandRank.ROYAL_FLUSH;
+        if (isStraightFlush(combo))
+            return GameEngine.HandRank.STRAIGHT_FLUSH;
+        if (isFourOfAKind(combo))
+            return GameEngine.HandRank.FOUR_OF_A_KIND;
+        if (isFullHouse(combo))
+            return GameEngine.HandRank.FULL_HOUSE;
+        if (isFlush(combo))
+            return GameEngine.HandRank.FLUSH;
+        if (isStraight(combo))
+            return GameEngine.HandRank.STRAIGHT;
+        if (isThreeOfAKind(combo))
+            return GameEngine.HandRank.THREE_OF_A_KIND;
+        if (isTwoPair(combo))
+            return GameEngine.HandRank.TWO_PAIR;
+        if (isOnePair(combo))
+            return GameEngine.HandRank.ONE_PAIR;
+
         return GameEngine.HandRank.HIGH_CARD;
     }
 
     private static boolean isRoyalFlush(List<GameEngine.Card> combo) {
-        return isStraightFlush(combo) && combo.get(0).rank == GameEngine.Rank.ACE && 
-               combo.get(4).rank == GameEngine.Rank.TEN;
+        return isStraightFlush(combo) && combo.get(0).rank == GameEngine.Rank.ACE &&
+                combo.get(4).rank == GameEngine.Rank.TEN;
     }
 
     private static boolean isStraightFlush(List<GameEngine.Card> combo) {
@@ -77,18 +98,18 @@ public class HandEvaluator {
 
     private static boolean isStraight(List<GameEngine.Card> combo) {
         boolean normalStraight = true;
-        for (int i = 0; i < combo.size()-1; i++) {
-            if (combo.get(i).rank.value - 1 != combo.get(i+1).rank.value) {
+        for (int i = 0; i < combo.size() - 1; i++) {
+            if (combo.get(i).rank.value - 1 != combo.get(i + 1).rank.value) {
                 normalStraight = false;
                 break;
             }
         }
-        
+
         boolean lowStraight = combo.get(0).rank == GameEngine.Rank.ACE &&
-                              combo.get(1).rank == GameEngine.Rank.FIVE &&
-                              combo.get(2).rank == GameEngine.Rank.FOUR &&
-                              combo.get(3).rank == GameEngine.Rank.THREE &&
-                              combo.get(4).rank == GameEngine.Rank.TWO;
+                combo.get(1).rank == GameEngine.Rank.FIVE &&
+                combo.get(2).rank == GameEngine.Rank.FOUR &&
+                combo.get(3).rank == GameEngine.Rank.THREE &&
+                combo.get(4).rank == GameEngine.Rank.TWO;
 
         return normalStraight || lowStraight;
     }

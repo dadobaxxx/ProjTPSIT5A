@@ -1,17 +1,23 @@
+package com.ProjTPSIT5A;
+
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.logging.*;
 
 public class GameEngine {
+    private static final Logger logger = Logger.getLogger(GameEngine.class.getName());
+
     private List<String> players = new ArrayList<>();
     private Map<String, List<Card>> playerCards = new HashMap<>();
     private Deck deck = new Deck();
     private List<Card> communityCards = new ArrayList<>();
     private int currentPlayer = 0;
+    private int maxBet = 100;
     private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> currentTimer;
     private Map<String, PokerServer.ClientHandler> clientMap = new HashMap<>();
-    private int maxBet = 100;
 
+    // Eccezioni
     public static class PokerException extends Exception {
         public PokerException(String message) {
             super(message);
@@ -19,14 +25,30 @@ public class GameEngine {
     }
 
     public static class InvalidBetException extends PokerException {
-        public InvalidBetException(String message) {
-            super(message);
+        public InvalidBetException(int max) {
+            super("Massimo: " + max);
         }
+
+        public InvalidBetException(String msg) {
+            super(msg);
+        } // Costruttore aggiunto
     }
 
     public static class DeckEmptyException extends PokerException {
         public DeckEmptyException() {
             super("Mazzo esaurito");
+        }
+    }
+
+    public static class NotYourTurnException extends PokerException {
+        public NotYourTurnException(String player) {
+            super(player + ": Non è il tuo turno!");
+        }
+    }
+
+    public static class InvalidPlayerException extends PokerException {
+        public InvalidPlayerException(String player) {
+            super("Giocatore non valido: " + player);
         }
     }
 
@@ -74,59 +96,106 @@ public class GameEngine {
         }
 
         public Card draw() throws DeckEmptyException {
-            if (index >= cards.size()) {
+            if (index >= cards.size())
                 throw new DeckEmptyException();
-            }
             return cards.get(index++);
         }
     }
 
-    public void addPlayer(String playerName, PokerServer.ClientHandler client) {
+    // Metodi principali
+    public void addPlayer(String playerName, PokerServer.ClientHandler client) throws PokerException {
+        if (players.contains(playerName)) {
+            throw new InvalidPlayerException("Nome già in uso: " + playerName);
+        }
+
         try {
             players.add(playerName);
             playerCards.put(playerName, new ArrayList<>());
             clientMap.put(playerName, client);
             dealCards(playerName);
         } catch (DeckEmptyException e) {
-            client.sendMessage("ERRORE: Impossibile distribuire carte - " + e.getMessage());
+            throw new PokerException("Impossibile aggiungere giocatore: " + e.getMessage());
         }
     }
 
-    private void dealCards(String player) throws DeckEmptyException {
-        playerCards.get(player).add(deck.draw());
-        playerCards.get(player).add(deck.draw());
-    }
-
-    public void processCommand(String command, PokerServer.ClientHandler client) {
+    public void processCommand(String command, PokerServer.ClientHandler client) throws PokerException {
         cancelTimer();
+        String player = client.playerName;
+
+        if (!players.get(currentPlayer).equals(player)) {
+            throw new NotYourTurnException(player);
+        }
 
         try {
             if (command.startsWith("bet ")) {
-                int amount = Integer.parseInt(command.substring(4));
-                validateBet(amount, client.playerName);
+                handleBet(command, client.playerName);
             } else if (command.equals("fold")) {
-                int playerIndex = players.indexOf(client.playerName);
-                players.remove(client.playerName);
-                clientMap.remove(client.playerName);
-                playerCards.remove(client.playerName);
-                if (currentPlayer >= playerIndex && currentPlayer > 0) {
-                    currentPlayer--;
-                }
+                handleFold(player);
             }
             nextPlayer();
             startTimer();
         } catch (NumberFormatException e) {
-            client.sendMessage("ERRORE: Importo non valido");
-        } catch (InvalidBetException e) {
-            client.sendMessage("ERRORE: " + e.getMessage());
+            throw new InvalidBetException("Formato non valido");
         }
     }
 
+    private PokerServer.ClientHandler getCurrentClient() {
+        if (players.isEmpty())
+            return null;
+        return clientMap.get(players.get(currentPlayer));
+    }
+
+    private void handleBet(String command, String player) throws InvalidBetException {
+        int amount = Integer.parseInt(command.substring(4));
+        validateBet(amount);
+        logger.info(player + " scommette " + amount);
+    }
+
+    private void validateBet(int amount) throws InvalidBetException {
+        if (amount <= 0) {
+            throw new InvalidBetException("Importo deve essere positivo");
+        }
+        if (amount > maxBet) {
+            throw new InvalidBetException(maxBet);
+        }
+    }
+
+    private void handleFold(String player) {
+        int index = players.indexOf(player);
+        players.remove(player);
+        playerCards.remove(player);
+        clientMap.remove(player);
+
+        if (currentPlayer >= index && currentPlayer > 0) {
+            currentPlayer--;
+        }
+        logger.info(player + " folds");
+    }
+
+    // Metodi di supporto
+    private void dealCards(String player) throws DeckEmptyException {
+        if (deck.cards.size() - deck.index < 2) {
+            throw new DeckEmptyException();
+        }
+        playerCards.get(player).add(deck.draw());
+        playerCards.get(player).add(deck.draw());
+    }
+
+    private void nextPlayer() {
+        if (players.isEmpty())
+            return;
+        currentPlayer = (currentPlayer + 1) % players.size();
+        logger.info("Turno di " + players.get(currentPlayer));
+    }
+
     private void startTimer() {
-        final PokerServer.ClientHandler currentClient = getCurrentClient();
         currentTimer = timer.schedule(() -> {
-            PokerServer.broadcastMessage("Timeout per " + players.get(currentPlayer), null);
-            processCommand("fold", currentClient);
+            PokerServer.ClientHandler current = getCurrentClient();
+            try {
+                processCommand("fold", current);
+            } catch (PokerException e) {
+                logger.warning("Timeout fallito: " + e.getMessage());
+            }
         }, 30, TimeUnit.SECONDS);
     }
 
@@ -136,31 +205,16 @@ public class GameEngine {
         }
     }
 
-    private void nextPlayer() {
-        if (players.isEmpty())
-            return;
-        currentPlayer = (currentPlayer + 1) % players.size();
-    }
+    public HandRank evaluatePlayerHand(String playerName) throws InvalidPlayerException {
+        if (!playerCards.containsKey(playerName)) {
+            throw new InvalidPlayerException(playerName);
+        }
 
-    private PokerServer.ClientHandler getCurrentClient() {
-        if (players.isEmpty())
-            return null;
-        return clientMap.get(players.get(currentPlayer));
-    }
-
-    public HandRank evaluatePlayerHand(String playerName) {
         List<Card> allCards = new ArrayList<>();
         allCards.addAll(playerCards.get(playerName));
         allCards.addAll(communityCards);
+
         return HandEvaluator.evaluateHand(allCards);
     }
 
-    private void validateBet(int amount, String playerName) throws InvalidBetException {
-        if (amount <= 0) {
-            throw new InvalidBetException("L'importo deve essere maggiore di zero");
-        }
-        if (amount > maxBet) {
-            throw new InvalidBetException("Superato il massimo consentito (" + maxBet + ")");
-        }
-    }
 }
