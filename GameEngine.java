@@ -4,6 +4,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.*;
 
+import com.ProjTPSIT5A.PokerServer.NetworkException;
+
 public class GameEngine {
     private static final Logger logger = Logger.getLogger(GameEngine.class.getName());
 
@@ -113,6 +115,21 @@ public class GameEngine {
             playerCards.put(playerName, new ArrayList<>());
             clientMap.put(playerName, client);
             dealCards(playerName);
+
+            List<Card> cards = playerCards.get(playerName);
+            String card1 = cards.get(0).rank + "_" + cards.get(0).suit;
+            String card2 = cards.get(1).rank + "_" + cards.get(1).suit;
+
+            try {
+                client.sendMessage("CARD:PLAYER:" + card1 + "," + card2);
+                logger.info("Carte inviate a " + playerName);
+            } catch (PokerServer.NetworkException e) {
+                // Gestione errori di rete
+                logger.log(Level.SEVERE, "Errore invio carte a " + playerName, e);
+                removePlayer(playerName); // Pulizia dello stato
+                throw new PokerException("Connessione fallita per " + playerName);
+            }
+
         } catch (DeckEmptyException e) {
             throw new PokerException("Impossibile aggiungere giocatore: " + e.getMessage());
         }
@@ -186,6 +203,13 @@ public class GameEngine {
             return;
         currentPlayer = (currentPlayer + 1) % players.size();
         logger.info("Turno di " + players.get(currentPlayer));
+    }
+
+    public void removePlayer(String playerName) {
+        players.remove(playerName);
+        playerCards.remove(playerName);
+        clientMap.remove(playerName);
+        logger.info(playerName + " rimosso per errori di rete");
     }
 
     private void startTimer() {

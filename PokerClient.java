@@ -5,10 +5,18 @@ import javafx.application.Platform;
 import javafx.stage.Stage;
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.math.BigInteger;
 import java.util.Optional;
+import java.util.logging.*;
 
 public class PokerClient extends Application {
+    static {
+        System.setProperty("java.util.logging.SimpleFormatter.format",
+                "[%1$tF %1$tT] [%4$-7s] %5$s %n");
+    }
+
+    private static final Logger logger = Logger.getLogger(PokerServer.class.getName());
     private PokerGUI gui;
     private PrintWriter out;
     private BufferedReader in;
@@ -29,6 +37,7 @@ public class PokerClient extends Application {
     private void connectToServer() {
         try {
             Socket socket = new Socket("localhost", 12345);
+            socket.setSoTimeout(10000);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
@@ -57,30 +66,79 @@ public class PokerClient extends Application {
         try {
             String serverMessage;
             while ((serverMessage = in.readLine()) != null) {
-                String decrypted = RSACryptography.decriptS(rsa, serverMessage);
-                handleServerMessage(decrypted);
+                final String finalMessage = serverMessage; // Variabile effectively final
+                logger.info("Messaggio ricevuto: " + finalMessage);
+
+                Platform.runLater(() -> {
+                    try {
+                        if (finalMessage.trim().isEmpty()) {
+                            logger.warning("Messaggio vuoto ignorato");
+                            return;
+                        }
+                        handleServerMessage(finalMessage); // Ora può essere usata in lambda
+                    } catch (Exception e) {
+                        logger.log(Level.SEVERE, "Errore elaborazione messaggio", e);
+                    }
+                });
             }
+        } catch (SocketTimeoutException e) {
+            Platform.runLater(() -> gui.showError("Timeout", "Connessione al server persa"));
         } catch (Exception ex) {
-            Platform.runLater(() -> gui.showError("Errore di connessione", "Connessione al server persa"));
+            Platform.runLater(() -> gui.showError("Errore", "Connessione interrotta"));
         }
     }
 
     private void handleServerMessage(String message) {
-        if (message.startsWith("CARD:")) {
-            Platform.runLater(() -> gui.updateCards(message));
-        } else if (message.startsWith("POT:")) {
-            Platform.runLater(() -> gui.updatePot(message));
-        } else {
-            Platform.runLater(() -> gui.appendChatMessage(message));
+        try {
+            if (message == null || message.trim().isEmpty()) {
+                logger.warning("Ricevuto messaggio vuoto dal server");
+                return;
+            }
+
+            // Gestione ordinata per tipo di messaggio
+            if (message.startsWith("CARD:")) {
+                handleCardMessage(message);
+            } else if (message.equals("PING")) {
+                handlePingMessage();
+            } else if (message.startsWith("[ERRORE]")) {
+                handleErrorMessage(message);
+            } else {
+                handleChatMessage(message);
+            }
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Errore elaborazione messaggio: " + message, e);
+            Platform.runLater(() -> gui.showError("Errore", "Formato messaggio non valido: " + message));
         }
     }
 
+    // Metodi helper separati per ogni tipo di messaggio
+    private void handleCardMessage(String cardData) {
+        Platform.runLater(() -> gui.updateCards(cardData));
+    }
+
+    private void handlePingMessage() {
+        // Logica per gestire heartbeat (es: reset timer)
+        logger.fine("Ricevuto PING dal server");
+    }
+
+    private void handleErrorMessage(String errorMsg) {
+        Platform.runLater(() -> gui.showError("Errore Server", errorMsg.substring("[ERRORE]".length())));
+    }
+
+    private void handleChatMessage(String chatMsg) {
+        Platform.runLater(() -> gui.appendChatMessage(chatMsg));
+    }
+
     public void sendMessage(String message) {
-        try {
-            String encrypted = RSACryptography.criptS(rsa, message);
-            out.println(encrypted);
-        } catch (Exception e) {
-            gui.showError("Errore crittografia", "Impossibile inviare il messaggio");
+        if (message.equals(playerName)) {
+            try {
+                String encrypted = RSACryptography.criptS(rsa, message);
+                out.println(encrypted);
+            } catch (Exception e) {
+                gui.showError("Errore crittografia", "Impossibile inviare il nome");
+            }
+        } else {
+            out.println(message);
         }
     }
 }

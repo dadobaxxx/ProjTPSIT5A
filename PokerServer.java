@@ -17,7 +17,7 @@ public class PokerServer {
     private static final int TURN_TIMEOUT = 30;
     private static List<ClientHandler> clients = new ArrayList<>();
     private static GameEngine gameEngine = new GameEngine();
-    private static RSACryptography rsa = new RSACryptography(2048);
+    private static RSACryptography rsa;
 
     public static class NetworkException extends Exception {
         public NetworkException(String detail) {
@@ -26,6 +26,16 @@ public class PokerServer {
     }
 
     public static void main(String[] args) {
+        // Inizializzazione sicura delle chiavi RSA
+        try {
+            logger.info("Generazione chiavi RSA...");
+            rsa = new RSACryptography(2048);
+            logger.info("Chiavi valide: e=" + rsa.getE() + ", n=" + rsa.getN().bitLength() + " bit");
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "ERRORE CRITICO: Impossibile generare le chiavi RSA", e);
+            System.exit(1);
+        }
+
         ExecutorService executor = Executors.newCachedThreadPool();
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             logger.info("Server avviato sulla porta " + PORT);
@@ -33,6 +43,7 @@ public class PokerServer {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     Socket socket = serverSocket.accept();
+                    logger.info("Nuova connessione da: " + socket.getInetAddress());
                     ClientHandler clientThread = new ClientHandler(socket, gameEngine, rsa);
                     clients.add(clientThread);
                     executor.execute(clientThread);
@@ -81,25 +92,35 @@ public class PokerServer {
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
                 // Invia chiave pubblica
-                sendUnencrypted(rsa.getE().toString());
-                sendUnencrypted(rsa.getN().toString());
+                String eStr = rsa.getE().toString();
+                String nStr = rsa.getN().toString();
+                if (eStr == null || nStr == null) {
+                    throw new IOException("Chiavi RSA non inizializzate");
+                }
+                sendUnencrypted(eStr);
+                sendUnencrypted(nStr);
 
+                socket.setSoTimeout(10000);
                 String encryptedName = in.readLine();
+                if (encryptedName == null) {
+                    throw new IOException("Nessun nome ricevuto");
+                }
                 playerName = RSACryptography.decriptS(rsa, encryptedName);
+                logger.info("Registrazione nuovo giocatore: " + playerName);
 
                 try {
                     gameEngine.addPlayer(playerName, this);
                     broadcastMessage(playerName + " si è unito al tavolo!", this);
                 } catch (GameEngine.PokerException e) {
                     sendError("Registrazione fallita", e.getMessage());
+                    logger.log(Level.SEVERE, "Errore registrazione giocatore", e);
                     return;
                 }
 
                 processClientCommands();
 
             } catch (IOException e) {
-                logger.log(Level.WARNING, "Errore connessione client", e);
-            } finally {
+                logger.log(Level.SEVERE, "Errore connessione client", e);
                 cleanup();
             }
         }
@@ -108,10 +129,8 @@ public class PokerServer {
             try {
                 String inputLine;
                 while ((inputLine = in.readLine()) != null) {
-
                     String decrypted = RSACryptography.decriptS(rsa, inputLine);
                     handleCommand(decrypted);
-
                 }
             } catch (IOException e) {
                 logger.log(Level.WARNING, "Lettura comandi fallita", e);
@@ -140,12 +159,7 @@ public class PokerServer {
         }
 
         public void sendMessage(String message) throws NetworkException {
-            try {
-                String encrypted = RSACryptography.criptS(rsa, message);
-                out.println(encrypted);
-            } catch (RSACryptography.CryptoException e) {
-                throw new NetworkException("Crittografia fallita: " + e.getMessage());
-            }
+            out.println(message);
         }
 
         private void sendError(String type, String detail) {
@@ -153,21 +167,6 @@ public class PokerServer {
                 sendMessage("[ERRORE] " + type + ": " + detail);
             } catch (NetworkException e) {
                 logger.log(Level.WARNING, "Impossibile inviare errore al client", e);
-            }
-        }
-
-        public void startTurnTimer() {
-            try {
-                timerExecutor.schedule(() -> {
-                    try {
-                        gameEngine.processCommand("fold", this);
-                        broadcastMessage(playerName + " timeout! Fold automatico", null);
-                    } catch (GameEngine.PokerException e) {
-                        logger.log(Level.WARNING, "Timeout fallito", e);
-                    }
-                }, TURN_TIMEOUT, TimeUnit.SECONDS);
-            } catch (RejectedExecutionException e) {
-                logger.log(Level.WARNING, "Timer interrotto", e);
             }
         }
 
@@ -179,8 +178,10 @@ public class PokerServer {
                 timerExecutor.shutdownNow();
                 clients.remove(this);
                 if (playerName != null) {
+                    gameEngine.removePlayer(playerName);
                     broadcastMessage(playerName + " ha lasciato il tavolo.", this);
                 }
+                logger.info("Connessione chiusa per " + playerName);
             } catch (IOException e) {
                 logger.log(Level.WARNING, "Pulizia risorse fallita", e);
             }
